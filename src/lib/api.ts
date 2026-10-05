@@ -5,9 +5,9 @@ export interface OrderInput {
   name: string;
   phone: string;
   deliveryType: "retiro" | "despacho";
-  address?: string;
-  comuna?: string;
-  notes?: string;
+  address?: string | undefined;
+  comuna?: string | undefined;
+  notes?: string | undefined;
   paymentMethod: "efectivo" | "transferencia";
   items: CartItem[];
   total: number;
