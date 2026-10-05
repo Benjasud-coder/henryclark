@@ -1,18 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ClipboardList, RefreshCw } from "lucide-react";
+import { ArrowLeft, ClipboardList, LogOut, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { isAdminUser } from "@/lib/admin-auth";
 import { getOrders, orderStatusOptions, updateOrderStatus, type Order, type OrderStatus } from "@/lib/api";
 import { formatCLP } from "@/lib/format";
 
 export const Route = createFileRoute("/orders")({ component: OrdersPage });
 
 function OrdersPage() {
+  const navigate = useNavigate();
+  const [access, setAccess] = useState<"checking" | "admin" | "denied">("checking");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -28,7 +32,53 @@ function OrdersPage() {
     }
   }
 
-  useEffect(() => { void loadOrders(); }, []);
+  useEffect(() => {
+    let active = true;
+    const redirectToLogin = () => {
+      if (!active) return;
+      setAccess("denied");
+      void navigate({ to: "/admin/login", replace: true });
+    };
+
+    async function verifyAdmin() {
+      const { data, error } = await supabase.auth.getUser();
+      if (!active) return;
+      if (error || !isAdminUser(data.user)) {
+        if (data.user) await supabase.auth.signOut();
+        redirectToLogin();
+        return;
+      }
+      setAccess("admin");
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || (session && !isAdminUser(session.user))) {
+        redirectToLogin();
+      }
+    });
+
+    void verifyAdmin();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (access !== "admin") return;
+    let active = true;
+    setLoading(true);
+    getOrders()
+      .then((result) => { if (active) setOrders(result); })
+      .catch(() => { if (active) toast.error("No pudimos cargar los pedidos. Revisa la conexión con Supabase."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [access]);
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    await navigate({ to: "/admin/login", replace: true });
+  }
 
   async function changeStatus(id: string, status: OrderStatus) {
     setUpdating(id);
@@ -45,6 +95,10 @@ function OrdersPage() {
 
   const pendingCount = useMemo(() => orders.filter((order) => !["entregado", "cancelado"].includes(order.status)).length, [orders]);
 
+  if (access !== "admin") {
+    return <main className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Comprobando acceso…</main>;
+  }
+
   return (
     <main className="min-h-screen bg-secondary/40 px-4 py-8 sm:px-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -55,9 +109,14 @@ function OrdersPage() {
             <h1 className="font-display text-4xl font-bold text-primary">Revisión de pedidos</h1>
             <p className="mt-2 text-muted-foreground">{pendingCount} pedidos pendientes de atención</p>
           </div>
-          <Button variant="outline" onClick={() => void loadOrders()} disabled={loading}>
-            <RefreshCw data-icon="inline-start" className={loading ? "animate-spin" : undefined} /> Actualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => void loadOrders()} disabled={loading}>
+              <RefreshCw data-icon="inline-start" className={loading ? "animate-spin" : undefined} /> Actualizar
+            </Button>
+            <Button variant="outline" onClick={() => void signOut()}>
+              <LogOut data-icon="inline-start" /> Cerrar sesión
+            </Button>
+          </div>
         </header>
 
         {loading ? <p className="py-12 text-center text-muted-foreground">Cargando pedidos…</p> : orders.length === 0 ? (

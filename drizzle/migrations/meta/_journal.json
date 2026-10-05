@@ -8,6 +8,13 @@
       "when": 1791200547594,
       "tag": "0000_shop_schema_and_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791220000000,
+      "tag": "0001_admin_only_order_access",
+      "breakpoints": true
     }
   ]
 }
