@@ -70,8 +70,10 @@ export function CheckoutDialog({ open, onOpenChange, onSuccess }: Props) {
       clear();
       form.reset();
       onSuccess(order);
-    } catch {
-      toast.error("No pudimos enviar tu pedido. Inténtalo nuevamente.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error desconocido";
+      console.error("[CheckoutDialog] Error al enviar pedido:", err);
+      toast.error(`No pudimos enviar tu pedido: ${msg}`);
     } finally {
       setSending(false);
     }

@@ -31,7 +31,7 @@ export async function submitOrder(order: OrderInput): Promise<{ id: string }> {
     p_customer_name: order.name,
     p_delivery_type: order.deliveryType,
     p_items: order.items.map((item) => ({
-      product_id: item.id,
+      product_id: item.productId,   // ← fix: CartItem usa `productId`, no `id`
       product_name: item.name,
       quantity: item.quantity,
       selected_options: item.options,
@@ -42,7 +42,19 @@ export async function submitOrder(order: OrderInput): Promise<{ id: string }> {
     p_phone: order.phone,
   });
 
-  if (error || !data?.[0]?.order_id) throw error ?? new Error("No se pudo crear el pedido");
+  if (error) {
+    console.error("[submitOrder] Supabase RPC error:", {
+      message: error.message,
+      code: (error as { code?: string }).code,
+      details: (error as { details?: string }).details,
+      hint: (error as { hint?: string }).hint,
+    });
+    throw error;
+  }
+  if (!data?.[0]?.order_id) {
+    console.error("[submitOrder] RPC devolvió respuesta vacía. data:", data);
+    throw new Error("No se pudo crear el pedido: respuesta vacía del servidor.");
+  }
   return { id: data[0].order_id };
 }
 
