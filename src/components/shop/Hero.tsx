@@ -13,14 +13,18 @@ export function Hero() {
         </p>
         <h1 className="font-display text-5xl font-bold leading-tight sm:text-7xl">Henry Clarke</h1>
         <p className="mt-4 font-display text-xl italic sm:text-2xl">Sabores que abrazan el alma</p>
-        <Button
-          size="lg"
-          variant="warm"
-          className="mt-10"
-          onClick={() => document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" })}
-        >
-          Ver menú <ChevronDown className="size-4" />
-        </Button>
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Button
+            size="lg"
+            variant="warm"
+            onClick={() => document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" })}
+          >
+            Ver menú <ChevronDown className="size-4" />
+          </Button>
+          <Button asChild size="lg" variant="outline" className="border-primary-foreground/40 bg-primary-foreground/10 text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
+            <a href="/orders">Revisar pedidos</a>
+          </Button>
+        </div>
       </div>
     </header>
   );
